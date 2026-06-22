@@ -62,17 +62,6 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok\n"))
 	})
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
-<head><title>FreeIPA Exporter</title></head>
-<body>
-<h1>FreeIPA Exporter</h1>
-<p><a href="/metrics">Metrics</a></p>
-<p><a href="/healthz">Health</a></p>
-</body>
-</html>
-`))
-	})
 
 	if err := http.ListenAndServe(fmt.Sprintf("%s:%s", config.Exporter.ListenAddr, config.Exporter.ListenPort), mux); err != nil {
 		log.Fatalf("failed to start HTTP server: %v", err)
