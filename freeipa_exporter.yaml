@@ -1,0 +1,6 @@
+ldap:
+  ldapUrl: "localhost:363"
+kerberos:
+  principal: "trololo@EXAMPLE.COM"
+  keytabPath: "skata.key"
+  realm: "EXAMPLE.COM"

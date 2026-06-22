@@ -1,3 +1,5 @@
+package main
+
 import (
 	"log"
 
@@ -15,11 +17,11 @@ type Krb5Collector struct {
 	krb5TGTDesc  *prometheus.Desc
 }
 
-func newKrb5Collector(config KerberosConfig) (*Krb5Collector, error) {
+func NewKrb5Collector(config KerberosConfig) (*Krb5Collector, error) {
 	collector := Krb5Collector{
 		keytabPath:   config.KeytabPath,
 		principal:    config.Principal,
-		krb5ConfPath: value_or_default(config.krb5ConfPath, "/etc/krb5.conf"),
+		krb5ConfPath: Value_or_default(config.Krb5ConfPath, "/etc/krb5.conf"),
 		realm:        config.Realm,
 		krb5TGTDesc: prometheus.NewDesc(
 			"freeipa_krb5_tgt_issued",

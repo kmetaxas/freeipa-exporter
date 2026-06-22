@@ -1,8 +1,8 @@
+package main
+
 import (
-	"fmt"
 	"log"
 	"net"
-	"net/url"
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
@@ -15,11 +15,10 @@ type LdapCollector struct {
 	ldapSearchDesc *prometheus.Desc
 }
 
-func newLdapCollector(config LdapConfig) (*LdapConfig, error) {
+func NewLdapCollector(config LdapConfig) (*LdapCollector, error) {
 	collector := LdapCollector{
-		ldapServer:     config.LdapUrl,
-		ldabBaseDN:     value_or_default(config.BaseDN, ""),
-		ldapSearchDesc: value_or_default(config.LdapQuery, "namingContexts supportedLDAPVersion"),
+		ldapServer: config.LdapUrl,
+		ldapBaseDN: Value_or_default(config.BaseDN, ""),
 		ldapSearchDesc: prometheus.NewDesc(
 			"freeipa_ldap_base_search_success",
 			"1 if LDAP base search succeeded, 0 otherwise.",
@@ -42,9 +41,6 @@ func (c *LdapCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.ldapSearchDesc, prometheus.GaugeValue, ldapValue)
 }
 
-// checkLDAP performs a base-object LDAP search against FreeIPA using a
-// GSSAPI SASL bind (Kerberos keytab).  It returns true if the search
-// succeeds and returns at least one entry.
 func (c *LdapCollector) checkLDAP() bool {
 	// Dial LDAP with a timeout.
 	dialer := &net.Dialer{Timeout: 10 * time.Second}
@@ -54,14 +50,6 @@ func (c *LdapCollector) checkLDAP() bool {
 		return false
 	}
 	defer conn.Close()
-
-	// Derive the SPN from the LDAP server URL: ldap/<hostname>
-	u, err := url.Parse(c.ldapServer)
-	if err != nil {
-		log.Printf("ldap: failed to parse LDAP URL %s: %v", c.ldapServer, err)
-		return false
-	}
-	spn := fmt.Sprintf("ldap/%s", u.Hostname())
 
 	// Base-object search.
 	sr, err := conn.Search(ldap.NewSearchRequest(

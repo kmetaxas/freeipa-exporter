@@ -16,7 +16,7 @@ func main() {
 	flag.Parse()
 
 	// Parse config
-	config, err := newConfig()
+	config, err := NewConfig()
 	if err != nil {
 		fmt.Printf("Error: %s", err)
 		os.Exit(-1)
@@ -24,12 +24,12 @@ func main() {
 	fmt.Printf("Main config: %+s", config)
 	reg := prometheus.NewRegistry()
 
-	ldapCollector, err := newLdapCollector(config.Ldap)
+	ldapCollector, err := NewLdapCollector(config.Ldap)
 	if err != nil {
 		fmt.Printf("Error creating ldap collector: %s", err)
 		os.Exit(-1)
 	}
-	krb5Collector, err := newKrb5Collector(config.Kerberos)
+	krb5Collector, err := NewKrb5Collector(config.Kerberos)
 	if err != nil {
 		fmt.Printf("Error creating Kerberos collector: %s", err)
 		os.Exit(-1)
@@ -74,12 +74,7 @@ func main() {
 `))
 	})
 
-	log.Printf("freeipa-exporter starting on %s", *listenAddr)
-	log.Printf("  principal: %s", *principal)
-	log.Printf("  keytab:    %s", *keytabPath)
-	log.Printf("  ldap:      %s  baseDN: %s", *ldapServer, *ldapBaseDN)
-
-	if err := http.ListenAndServe(*listenAddr, mux); err != nil {
+	if err := http.ListenAndServe(fmt.Sprintf("%s:%s", config.Exporter.ListenAddr, config.Exporter.ListenPort), mux); err != nil {
 		log.Fatalf("failed to start HTTP server: %v", err)
 	}
 }

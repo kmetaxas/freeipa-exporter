@@ -10,6 +10,11 @@ import (
 type Config struct {
 	Kerberos KerberosConfig `yaml:"kerberos" json:"kerberos"`
 	Ldap     LdapConfig     `yaml:"ldap" json:"yaml"`
+	Exporter ExporterConfig `yaml:"exporter" json:"exporter"`
+}
+type ExporterConfig struct {
+	ListenAddr string `yaml:"listenAddr" json:"listenAddr"`
+	ListenPort string `yaml:"port" json:"port"`
 }
 
 type KerberosConfig struct {
@@ -27,7 +32,7 @@ type LdapConfig struct {
 	CAPath    string `yaml:"caPath" json:"caPath"`
 }
 
-func newConfig() (*Config, error) {
+func NewConfig() (*Config, error) {
 	var err error = nil
 	config := Config{}
 	data, err := os.ReadFile("freeipa_exporter.yaml")
@@ -35,12 +40,15 @@ func newConfig() (*Config, error) {
 		return nil, err
 	}
 	yaml.Unmarshal(data, &config)
-	fmt.Printf("config = %v+", config)
+	if config.Exporter.ListenPort == "" {
+		config.Exporter.ListenPort = "9195"
+	}
+	fmt.Printf("config = %+v", config)
 	return &config, err
 }
 
 /* return v if not empty. return d otherwise */
-func value_or_default(v string, d string) string {
+func Value_or_default(v string, d string) string {
 	if v != "" {
 		return v
 	}
