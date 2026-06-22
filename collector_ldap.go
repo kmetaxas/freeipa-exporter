@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"os"
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
@@ -13,6 +14,7 @@ type LdapCollector struct {
 	ldapServer     string
 	ldapBaseDN     string
 	ldapSearchDesc *prometheus.Desc
+	hostname       string
 }
 
 func NewLdapCollector(config LdapConfig) (*LdapCollector, error) {
@@ -22,10 +24,16 @@ func NewLdapCollector(config LdapConfig) (*LdapCollector, error) {
 		ldapSearchDesc: prometheus.NewDesc(
 			"freeipa_ldap_base_search_success",
 			"1 if LDAP base search succeeded, 0 otherwise.",
-			nil, nil,
+			[]string{"server"},
+			nil,
 		),
 	}
+	collector.getHostname()
 	return &collector, nil
+}
+
+func (c *LdapCollector) getHostname() {
+	c.hostname, _ = os.Hostname()
 }
 
 func (c *LdapCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -38,7 +46,7 @@ func (c *LdapCollector) Collect(ch chan<- prometheus.Metric) {
 	if ldapOK {
 		ldapValue = 1
 	}
-	ch <- prometheus.MustNewConstMetric(c.ldapSearchDesc, prometheus.GaugeValue, ldapValue)
+	ch <- prometheus.MustNewConstMetric(c.ldapSearchDesc, prometheus.GaugeValue, ldapValue, c.hostname)
 }
 
 func (c *LdapCollector) checkLDAP() bool {

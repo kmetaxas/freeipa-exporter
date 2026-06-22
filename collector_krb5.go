@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/jcmturner/gokrb5/v8/client"
 	"github.com/jcmturner/gokrb5/v8/config"
@@ -15,6 +16,7 @@ type Krb5Collector struct {
 	password     string
 	realm        string
 	krb5ConfPath string
+	hostname     string
 	krb5TGTDesc  *prometheus.Desc
 }
 
@@ -26,13 +28,19 @@ func NewKrb5Collector(config KerberosConfig) (*Krb5Collector, error) {
 		password:     config.Password,
 		realm:        config.Realm,
 		krb5TGTDesc: prometheus.NewDesc(
-			"freeipa_krb5_tgt_issued",
-			"How many tickets have been issued.",
-			nil, nil,
+			"freeipa_krb5_tgt_issue_success",
+			"1 =TGT issued successfully, 0 = failed ",
+			[]string{"server"},
+			nil,
 		),
 	}
 
+	collector.getHostname()
 	return &collector, nil
+}
+
+func (c *Krb5Collector) getHostname() {
+	c.hostname, _ = os.Hostname()
 }
 
 func (c *Krb5Collector) Describe(ch chan<- *prometheus.Desc) {
@@ -46,7 +54,7 @@ func (c *Krb5Collector) Collect(ch chan<- prometheus.Metric) {
 	if tgtOK {
 		tgtValue = 1
 	}
-	ch <- prometheus.MustNewConstMetric(c.krb5TGTDesc, prometheus.GaugeValue, tgtValue)
+	ch <- prometheus.MustNewConstMetric(c.krb5TGTDesc, prometheus.GaugeValue, tgtValue, c.hostname)
 }
 
 // checkTGT attempts to acquire a Kerberos TGT using the provided keytab.
