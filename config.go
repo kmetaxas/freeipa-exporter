@@ -19,9 +19,10 @@ type ExporterConfig struct {
 
 type KerberosConfig struct {
 	Krb5ConfPath string `yaml:"krb5confPath" json:"krb5confPath"`
-	Principal    string `yaml:"principal" json:"principal"`
+	Username     string `yaml:"username" json:"username"`
 	KeytabPath   string `yaml:"keytabPath" json:"keytabPath"`
 	Realm        string `yaml:"realm" json:"realm"`
+	Password     string `yaml:"password" json:"password"`
 }
 
 type LdapConfig struct {
@@ -43,7 +44,10 @@ func NewConfig() (*Config, error) {
 	if config.Exporter.ListenPort == "" {
 		config.Exporter.ListenPort = "9195"
 	}
-	fmt.Printf("config = %+v", config)
+	// make sure either keytab or password defined, but not both
+	if config.Kerberos.Password != "" && config.Kerberos.Krb5ConfPath != "" {
+		return &config, fmt.Errorf("Either password or keytab must be defined, but not both!")
+	}
 	return &config, err
 }
 
