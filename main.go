@@ -33,12 +33,20 @@ func main() {
 		fmt.Printf("Error creating Kerberos collector: %s\n", err)
 		os.Exit(-1)
 	}
+	krb5LogCollector, err := NewKrb5LogCollector(config.Kerberos)
+	if err != nil {
+		fmt.Printf("Error creating Kerberos log collector: %s\n", err)
+		os.Exit(-1)
+	}
 
 	if err := reg.Register(ldapCollector); err != nil {
 		log.Fatalf("failed to register ldap collector: %v", err)
 	}
 	if err := reg.Register(krb5Collector); err != nil {
 		log.Fatalf("failed to register krb5 collector: %v", err)
+	}
+	if err := reg.Register(krb5LogCollector); err != nil {
+		log.Fatalf("failed to register krb5 log collector: %v", err)
 	}
 
 	// Optional: expose build info metric.

@@ -19,6 +19,7 @@ type ExporterConfig struct {
 
 type KerberosConfig struct {
 	Krb5ConfPath string `yaml:"krb5confPath" json:"krb5confPath"`
+	KdcLogPath   string `yaml:"kdcLogPath" json:"kdcLogPath"`
 	Username     string `yaml:"username" json:"username"`
 	KeytabPath   string `yaml:"keytabPath" json:"keytabPath"`
 	Realm        string `yaml:"realm" json:"realm"`
@@ -47,6 +48,9 @@ func NewConfig() (*Config, error) {
 	// make sure either keytab or password defined, but not both
 	if config.Kerberos.Password != "" && config.Kerberos.Krb5ConfPath != "" {
 		return &config, fmt.Errorf("Either password or keytab must be defined, but not both!")
+	}
+	if config.Kerberos.KdcLogPath == "" {
+		config.Kerberos.KdcLogPath = "/var/log/krb5kdc.log"
 	}
 	return &config, err
 }

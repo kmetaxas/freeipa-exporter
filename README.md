@@ -22,6 +22,10 @@ A lightweight [Prometheus](https://prometheus.io/) exporter for monitoring the h
 | **LDAP**     | `freeipa_ldap_total_connections`     | Total number of connections since the server started.     |
 | **LDAP**     | `freeipa_ldap_version_info`            | Directory server version info.                            |
 | **Kerberos** | `freeipa_krb5_tgt_issue_success`     | `1` if a TGT is issued successfully, `0` otherwise.       |
+| **Kerberos** | `freeipa_krb5_ticket_issue_errors_total` | Ticket issue errors observed in `krb5kdc.log`.         |
+| **Kerberos** | `freeipa_krb5_tgt_tickets_issued_total` | TGT tickets issued, labelled by principal.             |
+| **Kerberos** | `freeipa_krb5_tgs_tickets_issued_total` | TGS tickets issued, labelled by principal, service, and host. |
+| **Kerberos** | `freeipa_krb5_locked_out_accounts_total` | `LOCKED_OUT` events, labelled by principal.            |
 
 All metrics are labelled by `server` (hostname) so you can aggregate across a fleet.
 
@@ -41,6 +45,7 @@ All metrics are labelled by `server` (hostname) so you can aggregate across a fl
      # either pass or keytab , but not both
      keytabPath: "/etc/freeipa-exporter/exporter.keytab"
      # krb5confPath: "/etc/krb5.conf"   # optional, defaults to /etc/krb5.conf
+     # kdcLogPath: "/var/log/krb5kdc.log" # optional, defaults to /var/log/krb5kdc.log
    exporter:
      #listenAddr: "0.0.0.0" # optional, defaults to all interfaces.
      port: "9195"
