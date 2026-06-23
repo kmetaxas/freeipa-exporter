@@ -6,12 +6,24 @@ A lightweight [Prometheus](https://prometheus.io/) exporter for monitoring the h
 
 ## What it checks
 
-| Collector    | Metric                             | Description                                               |
-| ------------ | ---------------------------------- | --------------------------------------------------------- |
-| **LDAP**     | `freeipa_ldap_base_search_success` | `1` if a base-object LDAP search succeeds, `0` otherwise. |
-| **Kerberos** | `freeipa_krb5_tgt_issue_success`   | `1` if a TGT is issued successfully, `0` otherwise.       |
+| Collector    | Metric                               | Description                                               |
+| ------------ | ------------------------------------ | --------------------------------------------------------- |
+| **LDAP**     | `freeipa_ldap_base_search_success`   | `1` if a base-object LDAP search succeeds, `0` otherwise. |
+| **LDAP**     | `freeipa_ldap_bytes_sent`            | Number of bytes sent by the directory server since startup. |
+| **LDAP**     | `freeipa_ldap_connections`           | Number of connections currently in the connection table.  |
+| **LDAP**     | `freeipa_ldap_current_connections`   | Number of currently open and active connections.          |
+| **LDAP**     | `freeipa_ldap_dtable_size`           | Size of the file descriptor table.                        |
+| **LDAP**     | `freeipa_ldap_entries_sent`          | Number of entries sent by the directory server since startup. |
+| **LDAP**     | `freeipa_ldap_nbackends`             | Number of backend databases.                              |
+| **LDAP**     | `freeipa_ldap_ops_initiated`         | Number of operations initiated since startup.             |
+| **LDAP**     | `freeipa_ldap_read_waiters`          | Number of threads waiting to read data from clients.      |
+| **LDAP**     | `freeipa_ldap_start_time`            | Unix timestamp when the directory server started.         |
+| **LDAP**     | `freeipa_ldap_threads`               | Number of worker threads.                                 |
+| **LDAP**     | `freeipa_ldap_total_connections`     | Total number of connections since the server started.     |
+| **LDAP**     | `freeipa_ldap_version_info`            | Directory server version info.                            |
+| **Kerberos** | `freeipa_krb5_tgt_issue_success`     | `1` if a TGT is issued successfully, `0` otherwise.       |
 
-Both metrics are labelled by `server` (hostname) so you can aggregate across a fleet.
+All metrics are labelled by `server` (hostname) so you can aggregate across a fleet.
 
 ## Quick start
 
