@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -70,25 +71,58 @@ func TestKrb5LogCollectorCollectCachedMetrics(t *testing.T) {
 	}
 }
 
-func TestKrb5LogCollectorReadNewLines(t *testing.T) {
-	file, err := os.CreateTemp(t.TempDir(), "krb5kdc.log")
-	if err != nil {
-		t.Fatalf("CreateTemp failed: %v", err)
+func TestKrb5LogCollectorTailsFile(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "krb5kdc.log")
+
+	line := "Nov 20 12:00:01 ipa.example.com krb5kdc[123](info): AS_REQ (8 etypes {aes256-cts}) 192.0.2.10: ISSUE: authtime 1700481601, etypes {rep=aes256-cts tkt=aes256-cts ses=aes256-cts}, user1@EXAMPLE.COM for krbtgt/EXAMPLE.COM@EXAMPLE.COM\n"
+	if err := os.WriteFile(logPath, []byte(line), 0644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
 	}
-	defer file.Close()
 
-	c := newTestKrb5LogCollector(file.Name())
-	var offset int64
+	c := newTestKrb5LogCollector(logPath)
+	c.pollInterval = 50 * time.Millisecond
 
-	if _, err := file.WriteString("Nov 20 12:00:01 ipa.example.com krb5kdc[123](info): AS_REQ (8 etypes {aes256-cts}) 192.0.2.10: ISSUE: authtime 1700481601, etypes {rep=aes256-cts tkt=aes256-cts ses=aes256-cts}, user1@EXAMPLE.COM for krbtgt/EXAMPLE.COM@EXAMPLE.COM\n"); err != nil {
+	go c.run()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		c.mu.RLock()
+		got := c.state.tgtIssued["user1@EXAMPLE.COM"]
+		c.mu.RUnlock()
+		if got == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("expected 1 TGT after initial read, got %v", got)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		t.Fatalf("OpenFile failed: %v", err)
+	}
+	if _, err := f.WriteString(line); err != nil {
 		t.Fatalf("WriteString failed: %v", err)
 	}
-	c.readNewLines(&offset)
-	c.readNewLines(&offset)
+	f.Close()
 
-	if got := c.state.tgtIssued["user1@EXAMPLE.COM"]; got != 1 {
-		t.Fatalf("expected line to be counted once across repeated reads, got %v", got)
+	deadline = time.Now().Add(2 * time.Second)
+	for {
+		c.mu.RLock()
+		got := c.state.tgtIssued["user1@EXAMPLE.COM"]
+		c.mu.RUnlock()
+		if got == 2 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("expected 2 TGTs after append, got %v", got)
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
+
+	c.Stop()
 }
 
 func TestKrb5LogCollectorDescribe(t *testing.T) {

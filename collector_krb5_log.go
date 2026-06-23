@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"io"
 	"log"
 	"maps"
 	"os"
@@ -10,7 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jdrews/go-tailer/fswatcher"
+	"github.com/jdrews/go-tailer/glob"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 )
 
 const defaultKrb5KDCLogPath = "/var/log/krb5kdc.log"
@@ -138,57 +139,31 @@ func (c *Krb5LogCollector) Collect(ch chan<- prometheus.Metric) {
 func (c *Krb5LogCollector) run() {
 	defer close(c.doneCh)
 
-	var offset int64
-	c.readNewLines(&offset)
+	parsedGlob, err := glob.Parse(c.logPath)
+	if err != nil {
+		log.Printf("krb5 log: failed to parse glob %s: %v", c.logPath, err)
+		return
+	}
 
-	ticker := time.NewTicker(c.pollInterval)
-	defer ticker.Stop()
+	logger := logrus.New()
+	tailer, err := fswatcher.RunPollingFileTailer([]glob.Glob{parsedGlob}, true, false, c.pollInterval, logger)
+	if err != nil {
+		log.Printf("krb5 log: failed to start tailer for %s: %v", c.logPath, err)
+		return
+	}
+	defer tailer.Close()
 
 	for {
 		select {
-		case <-ticker.C:
-			c.readNewLines(&offset)
+		case line, ok := <-tailer.Lines():
+			if !ok {
+				return
+			}
+			c.parseLine(line.Line)
 		case <-c.stopCh:
 			return
 		}
 	}
-}
-
-func (c *Krb5LogCollector) readNewLines(offset *int64) {
-	file, err := os.Open(c.logPath)
-	if err != nil {
-		log.Printf("krb5 log: failed to open %s: %v", c.logPath, err)
-		return
-	}
-	defer file.Close()
-
-	info, err := file.Stat()
-	if err != nil {
-		log.Printf("krb5 log: failed to stat %s: %v", c.logPath, err)
-		return
-	}
-	if info.Size() < *offset {
-		*offset = 0
-	}
-	if _, err := file.Seek(*offset, io.SeekStart); err != nil {
-		log.Printf("krb5 log: failed to seek %s: %v", c.logPath, err)
-		return
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		c.parseLine(scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		log.Printf("krb5 log: failed to read %s: %v", c.logPath, err)
-		return
-	}
-	current, err := file.Seek(0, io.SeekCurrent)
-	if err != nil {
-		log.Printf("krb5 log: failed to record offset for %s: %v", c.logPath, err)
-		return
-	}
-	*offset = current
 }
 
 func (c *Krb5LogCollector) parseLine(line string) {
@@ -206,7 +181,7 @@ func (c *Krb5LogCollector) parseLine(line string) {
 		return
 	}
 
-	if !strings.Contains(line, "ISSUE:") {
+	if !strings.Contains(line, "ISSUE:") && !strings.Contains(line, "NEEDED_PREAUTH") {
 		if strings.Contains(line, "AS_REQ") || strings.Contains(line, "TGS_REQ") {
 			c.state.ticketIssueErrors++
 		}
