@@ -1,6 +1,6 @@
 module github.com/kmetaxas/freeipa-exporter
 
-go 1.26
+go 1.24.0
 
 require (
 	github.com/go-ldap/ldap/v3 v3.4.13
