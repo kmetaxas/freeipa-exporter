@@ -11,11 +11,26 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// ldapConn abstracts the ldap.Conn methods we need for testability.
+type ldapConn interface {
+	Search(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error)
+	Close() error
+}
+
+// dialer is the function signature used to create an LDAP connection.
+type dialer func(url string, opts ...ldap.DialOpt) (ldapConn, error)
+
+// defaultDialer wraps ldap.DialURL to satisfy the dialer signature.
+func defaultDialer(url string, opts ...ldap.DialOpt) (ldapConn, error) {
+	return ldap.DialURL(url, opts...)
+}
+
 type LdapCollector struct {
 	ldapServer     string
 	ldapBaseDN     string
 	ldapSearchDesc *prometheus.Desc
 	hostname       string
+	dial           dialer
 
 	// cn=monitor metrics
 	bytesSentDesc          *prometheus.Desc
@@ -36,6 +51,7 @@ func NewLdapCollector(config LdapConfig) (*LdapCollector, error) {
 	collector := LdapCollector{
 		ldapServer: config.LdapUrl,
 		ldapBaseDN: Value_or_default(config.BaseDN, ""),
+		dial:       defaultDialer,
 		ldapSearchDesc: prometheus.NewDesc(
 			"freeipa_ldap_base_search_success",
 			"1 if LDAP base search succeeded, 0 otherwise.",
@@ -221,7 +237,7 @@ func (c *LdapCollector) Collect(ch chan<- prometheus.Metric) {
 func (c *LdapCollector) checkLDAP() bool {
 	// Dial LDAP with a timeout.
 	dialer := &net.Dialer{Timeout: 10 * time.Second}
-	conn, err := ldap.DialURL(c.ldapServer, ldap.DialWithDialer(dialer))
+	conn, err := c.dial(c.ldapServer, ldap.DialWithDialer(dialer))
 	if err != nil {
 		log.Printf("ldap: failed to dial %s: %v", c.ldapServer, err)
 		return false
@@ -251,7 +267,7 @@ func (c *LdapCollector) checkLDAP() bool {
 
 func (c *LdapCollector) queryMonitor() (map[string]string, error) {
 	dialer := &net.Dialer{Timeout: 10 * time.Second}
-	conn, err := ldap.DialURL(c.ldapServer, ldap.DialWithDialer(dialer))
+	conn, err := c.dial(c.ldapServer, ldap.DialWithDialer(dialer))
 	if err != nil {
 		return nil, err
 	}
